@@ -26,14 +26,14 @@ public class OrderService {
 		return repository.findAll();
 	}
 
-	public void save(Order order) throws OrderAlreadyExistsException {
+	public Order save(Order order) throws OrderAlreadyExistsException {
 		
 		Order orderRetrievy = repository.minhaBuscaPorTid(order.getTid());
 
 		if(orderRetrievy != null)
 			throw new OrderAlreadyExistsException("Já existe uma order para essa TID!");
 		
-		repository.save(order);
+		return repository.save(order);
 	}
 
 	public Order getOne(Integer id) throws Exception {

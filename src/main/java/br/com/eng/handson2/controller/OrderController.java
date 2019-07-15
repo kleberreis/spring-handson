@@ -3,6 +3,7 @@ package br.com.eng.handson2.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,7 +17,10 @@ import org.springframework.web.bind.annotation.RestController;
 import br.com.eng.handson2.exception.OrderAlreadyExistsException;
 import br.com.eng.handson2.exception.OrderNotFoundException;
 import br.com.eng.handson2.model.Order;
+import br.com.eng.handson2.model.OrderError;
 import br.com.eng.handson2.service.OrderService;
+
+import static org.springframework.hateoas.mvc.ControllerLinkBuilder.linkTo;
 
 @RestController
 @RequestMapping("/order")
@@ -55,23 +59,31 @@ public class OrderController {
 	}
 	
 	@PostMapping
-	public void createOrder(@RequestBody Order order) throws OrderAlreadyExistsException {
-		service.save(order);
+	public ResponseEntity<Object> createOrder(@RequestBody Order order) throws OrderAlreadyExistsException {
+		Order orderSaved = service.save(order);
+		
+		HttpHeaders headers = new HttpHeaders();
+		headers.setLocation(linkTo(getClass()).slash(orderSaved.getId()).toUri());
+		
+		return new ResponseEntity<Object>(null, headers, HttpStatus.CREATED);
 	}
 	
 	
     @ExceptionHandler({OrderAlreadyExistsException.class})
-    ResponseEntity handleInternalServerError(OrderAlreadyExistsException e) {
-        return new ResponseEntity<>(e.getMessage(), HttpStatus.CONFLICT);
+    ResponseEntity<OrderError> handleInternalServerError(OrderAlreadyExistsException e) {
+    	OrderError error = new OrderError(HttpStatus.CONFLICT.value(), e.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
     
     @ExceptionHandler({OrderNotFoundException.class})
-    ResponseEntity handleInternalServerError(OrderNotFoundException e) {
-        return new ResponseEntity<>(e.getMessage(), HttpStatus.NOT_FOUND);
+    ResponseEntity<OrderError> handleInternalServerError(OrderNotFoundException e) {
+    	OrderError error = new OrderError(HttpStatus.NOT_FOUND.value(), e.getMessage());
+        return new ResponseEntity<OrderError>(error, HttpStatus.NOT_FOUND);
     }
     
     @ExceptionHandler({Exception.class})
-    ResponseEntity handleInternalServerError(Exception e) {
-        return new ResponseEntity<>("Error Interno", HttpStatus.BAD_REQUEST);
+    ResponseEntity<OrderError> handleInternalServerError(Exception e) {
+    	OrderError error = new OrderError(HttpStatus.BAD_REQUEST.value(), "Error Interno");
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 }
